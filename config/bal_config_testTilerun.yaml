@@ -18,7 +18,7 @@ modules :
   - galsim.des
   - injector
   - ngmix_catalog
-  - des_star_catalog
+  #- des_star_catalog
 
 # These variables are not directly processed by GalSim; this simply allows a convenient way
 # to change multiple variable instances quickly throughout the config file.
@@ -32,7 +32,7 @@ some_variables :
   - &bal_dir '/data/des81.a/data/mtabbutt/Y6_integrations/Balrog-GalSim/'
   - &ngmix_dir '/data/des81.a/data/mtabbutt/Y6_integrations/inputs/'
   - &ngmix_file 'BALROG_RUN2_DEEP_CAT_FLAG0INVHS1BDFLT245.fits'
-  - &star_dir '/data/des81.a/data/mtabbutt/Y6_integrations/inputs/'
+  #- &star_dir '/data/des81.a/data/mtabbutt/Y6_integrations/inputs/'
 
 # Define the input files
 input :
@@ -59,24 +59,24 @@ input :
       t_max : 100
       #snr_min : 20.0
 
-    des_star_catalog :
-      base_dir : *star_dir
-      model_type :  'Model_16.5-26.5' # Can select which of Sahar's catalogs you want here
-      data_version : 'des-pizza-slices-y6-v13'
+    #des_star_catalog :
+      #base_dir : *star_dir
+      #model_type :  'Model_16.5-26.5' # Can select which of Sahar's catalogs you want here
+      #data_version : 'des-pizza-slices-y6-v15'
 
 # The gal field defines what kind of galaxy profile to use.
 gal :
-    type : List
-    items :
-        - # Galaxy component
-          type : ngmixGalaxy
+    #type : List
+    #items :
+       # - # Galaxy component
+    type : ngmixGalaxy
           # NOTE: Rotations do not currently work, as they are not consistent between different
           # exposures. This will be added in a future update!
           #rotate :
           #    # Random means uniform within 0-2pi rads
           #    type : Random
-        - # Star component
-          type : desStar
+        #- # Star component
+          #type : desStar
 
     # Here you would normally define various fields such as index to choose which galaxies
     # are injected. The balrog injection script takes care of position / index sampling, so
@@ -122,7 +122,7 @@ image :
     # bands : 'g'
 
     #version : 'y3v02'
-    version : 'des-pizza-slices-y6-v13'
+    version : 'des-pizza-slices-y6-v15'
     run_name : 'TEST'
 
     # Can choose to ignore existing image data and only include injected objects
@@ -137,15 +137,15 @@ image :
     # Can inject objects onto a grid
     pos_sampling :
         ngmix_catalog:
-            type : 'MixedGrid'
-            grid_type : 'HexGrid'
+            type : 'HexGrid'
+            #grid_type : 'HexGrid'
             grid_spacing : 20 # arcsec
-            inj_frac : 0.9 # its fraction not arcsec
+            #inj_frac : 1.0 # its fraction not arcsec
             offset : 'Random'
             rotate : 'Random'
-        des_star_catalog:
-            type : 'MixedGrid'
-            inj_frac : 0.1 # 
+        #des_star_catalog:
+            #type : 'MixedGrid'
+            #inj_frac : 0.01 # 
 
     # Load WCS from DES chip file
     wcs :

@@ -59,7 +59,7 @@ class desStarCatalog(object):
     _valid_file_types = ['cvs']
 
     # Data versions that have currently have implementations
-    _valid_data_versions = ['des-pizza-slices-y6-v13'] # MEGAN CHANGED FROM 'y3v02'
+    _valid_data_versions = ['y3v02', 'des-pizza-slices-y6-v13', 'des-pizza-slices-y6-v15'] # MEGAN CHANGED FROM 'y3v02'
 
     # From Sahar's catalog directory, currently in `/data/des20.b/data/sallam/Yanny-balrog/5sigma/`
     # NOTE: Gets set below after determining data version
@@ -140,7 +140,7 @@ class desStarCatalog(object):
             self.file_type = 'csv'
 
         if not zeropoint:
-            if self.data_version == 'des-pizza-slices-y6-v13': #MEGAN CHANGED
+            if self.data_version[:19] == 'des-pizza-slices-y6': #MEGAN CHANGED
                 # Catalogs made w/ zp of 30
                 self.zeropoint = 30.0
             else:
@@ -172,7 +172,7 @@ class desStarCatalog(object):
         Load in the star catalog for the given model type and tile name.
         '''
 
-        if self.data_version == 'des-pizza-slices-y6-v13': #MEAGN CHANGED
+        if self.data_version[:19] == 'des-pizza-slices-y6': #MEAGN CHANGED
             self.model_dir = os.path.join(self.base_dir, self.model_type)
             filename = 'Model_{}.{}'.format(self.tile, self.file_type)
             self.cat_file = os.path.join(self.model_dir, filename)
@@ -220,7 +220,7 @@ class desStarCatalog(object):
 
         mask = np.ones(len(self.orig_index), dtype=bool)
 
-        if self.data_version == 'des-pizza-slices-y6-v13': #MEGAN CHANGED
+        if self.data_version[:19] == 'des-pizza-slices-y6': #MEGAN CHANGED
             # No mask cuts in this version
             pass
 
@@ -322,7 +322,7 @@ class desStarCatalog(object):
         # NOTE: Used to iterate over all desired bands here, but this feature has
         # been removed as it is not useful and led to the possiblity of unintended bugs
         # for band in self.bands:
-        if self.data_version == 'des-pizza-slices-y6-v13': #MEGAN CHANGED
+        if (self.data_version[:19] == 'des-pizza-slices-y6') or (self.data_version == 'y3v02'): #MEGAN CHANGED
             # Needed for all mag calculations
             gmag = self.catalog['g_Corr'][index]
 
@@ -471,12 +471,12 @@ class desStarCatalog(object):
 #####------------------------------------------------------------------------------------------------
 # Helper Functions
 
-def return_valid_model_types(data_version='des-pizza-slices-y6-v13'):  #MEGAN changed from 'y3v02'
+def return_valid_model_types(data_version='y3v02'):  #MEGAN changed from 'y3v02'
     '''
     Useful to have this separate from _set_valid_model_types() for outside use.
     '''
 
-    if data_version == 'des-pizza-slices-y6-v13': #MEGAN changed from 'y3v02'
+    if (data_version[:19] == 'des-pizza-slices-y6') or (data_version == 'y3v02'): #MEGAN changed from 'y3v02'
         # There are the full-density models...
         valid_model_types = ['Model', 'Model_16.5-26.5', 'Model_16.5-27.5']
         # ...and the 'extra' density models, which are partitioned by percentage

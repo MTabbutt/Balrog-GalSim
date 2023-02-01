@@ -122,7 +122,7 @@ image :
     # bands : 'g'
 
     #version : 'y3v02'
-    version : 'des-pizza-slices-y6-v13'
+    version : 'des-pizza-slices-y6-v15'
     run_name : 'TEST'
 
     # Can choose to ignore existing image data and only include injected objects

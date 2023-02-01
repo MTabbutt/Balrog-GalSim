@@ -385,17 +385,17 @@ class MatchedCatalogs(object):
 
         if self.inj_type == 'ngmixGalaxy':
             det_cat['true_id'] = cat['id']
-	    det_cat['true_ra'] = cat['ra']
-	    det_cat['true_dec'] = cat['dec']
+            det_cat['true_ra'] = cat['ra']
+            det_cat['true_dec'] = cat['dec']
 
         elif self.inj_type == 'desStar':
-	    det_cat['true_ra'] = cat['RA_new']
-	    det_cat['true_dec'] = cat['DEC_new']
+            det_cat['true_ra'] = cat['RA_new']
+            det_cat['true_dec'] = cat['DEC_new']
 
         else:
             try:
-		det_cat['true_ra'] = cat['ra']
-		det_cat['true_dec'] = cat['dec']
+                det_cat['true_ra'] = cat['ra']
+                det_cat['true_dec'] = cat['dec']
             except:
                 raise Exception('No ra, dec columns found!')
 

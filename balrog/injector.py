@@ -254,7 +254,7 @@ def parse_bal_image_inputs(config, base):
             if not isinstance(band, str):
                 raise TypeError('Each passed band must be a string!')
     except KeyError:
-        print('config[bands]=',config['bands'])
+        print('config[bands]=', config['bands'])
         raise KeyError('Must specify which bands are to be used for injection!')
 
     # Process input 'version'
@@ -398,7 +398,8 @@ def parse_bal_image_inputs(config, base):
                                             'when using a `MixedGrid`!')
                     if not isinstance(val, float):
                         raise TypeError('`inj_frac` must be a float!')
-                    if val <= 0 or val >= 1:
+                    if val <= 0 or val >= 1: #MEGAN CHANGED THIS
+                    #if val < 0 or val > 1:
                         raise ValueError('`inj_frac` must be between 0 and 1!')
 
                 if key == 'grid_spacing':

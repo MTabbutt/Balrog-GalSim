@@ -197,7 +197,7 @@ class DESStarInputCatalog(DESInputCatalog):
         # TODO: Can we grab the injection type from the registered GS catalog?
         self.inj_type = 'desStar'
 
-        if self.data_version == 'des-pizza-slices-y6-v13': # MEGAN CHANGED previous: 'y3v02'
+        if (self.data_version[:19] == 'des-pizza-slices-y6') or (self.data_version == 'y3v02'): # MEGAN CHANGED previous: 'y3v02'
             import des_star_catalog
             valid_model_types = des_star_catalog.return_valid_model_types(
                                     data_version=self.data_version)
