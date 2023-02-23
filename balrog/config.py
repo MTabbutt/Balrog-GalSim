@@ -173,6 +173,12 @@ class Config(BaseConfig):
         self.inj_objs_only = im['inj_objs_only']
         self.pos_sampling = im['pos_sampling']
         self.rotate_objs = im['rotate_objs']
+        
+        # MEGAN ADDED
+        if 'injection_scheme' in im:
+            self.injection_scheme = im['injection_scheme']
+            #print(self.injection_scheme)
+        else: self.injection_scheme = None
 
         self.bindx = dict(zip(self.bands, range(len(self.bands))))
 

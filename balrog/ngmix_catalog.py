@@ -362,6 +362,7 @@ class ngmixCatalog(object):
             if n_random is not None:
                 warnings.warn("Ignoring input n_random, since indices were specified!")
 
+
         # Format indices correctly
         if hasattr(index, '__iter__'):
             indices = index
@@ -370,7 +371,8 @@ class ngmixCatalog(object):
 
         # Now convert ngmix galaxy to GSObject, with details dependent on type
         # QSTN: Should we add a more general scheme for ngmix types?
-
+        
+        
         galaxies = []
 
         for index in indices:
@@ -497,6 +499,7 @@ class ngmixCatalog(object):
         # Set up the random number generator.
         if rng is None:
             rng = galsim.BaseDeviate()
+        
 
         # QSTN: What is the weighting scheme for ngmix catalogs? Will need to adjust below code to
         # match (or exclude entierly)
@@ -505,7 +508,8 @@ class ngmixCatalog(object):
         else:
             print('Selecting random object without correcting for catalog-level selection effects.')
             use_weights = None
-
+  
+            
         # By default, get the number of RNG calls. Then decide whether or not to return them
         # based on _n_rng_calls.
         index, n_rng_calls = galsim.utilities.rand_with_replacement(
@@ -520,8 +524,10 @@ class ngmixCatalog(object):
             if _n_rng_calls:
                 return index[0], n_rng_calls
             else:
-                return index[0]
-
+                return index[0] 
+            
+            
+            
     #----------------------------------------------------------------------------------------------
 
     # The catalog type is referred to as a 'subtype' w.r.t BalInput types
@@ -595,10 +601,12 @@ def BuildNgmixGalaxy(config, base, ignore, gsparams, logger):
 
     ngmix_cat = galsim.config.GetInputObj('ngmix_catalog', config, base, 'NgmixGalaxy')
 
+
     # If galaxies are selected based on index, and index is Sequence or Random, and max
     # isn't set, set it to nobjects-1.
     if 'index' in config:
         galsim.config.SetDefaultIndex(config, ngmix_cat.getNObjects())
+
 
     # Grab necessary parameters
     req = ngmixCatalog.makeGalaxies._req_params
@@ -618,11 +626,14 @@ def BuildNgmixGalaxy(config, base, ignore, gsparams, logger):
     else:
         gsparams = None
 
+
     # This handles the case of no index passed in config file
     # Details are in ngmixCatalog
     rng = None
     if 'index' not in kwargs:
         rng = galsim.config.GetRNG(config, base, logger, 'NgmixGalaxy')
+        
+        # Megan Changed
         kwargs['index'], n_rng_calls = ngmix_cat.selectRandomIndex(1, rng=rng, _n_rng_calls=True)
 
         # Make sure this process gives consistent results regardless of the number of processes
@@ -636,7 +647,8 @@ def BuildNgmixGalaxy(config, base, ignore, gsparams, logger):
     index = kwargs['index']
     if index >= ngmix_cat.getNObjects():
         raise IndexError("%s index has gone past the number of entries in the catalog"%index)
-
+                 
+     
     logger.debug('obj %d: NgmixGalaxy kwargs = %s',base.get('obj_num',0),kwargs)
 
     kwargs['ngmix_catalog'] = ngmix_cat

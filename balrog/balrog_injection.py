@@ -123,6 +123,8 @@ def RunBalrog():
             # with GalSim
             if vb: print('Writing Balrog config...')
             tile.write_bal_config()
+           
+            
             if vb: print('Running GalSim for tile...')
             rc = tile.run_galsim(tile.tile_name, real, vb=vb)
             if rc != 0:

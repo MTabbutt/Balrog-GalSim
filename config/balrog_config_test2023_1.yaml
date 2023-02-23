@@ -29,8 +29,8 @@ some_variables :
   # - &max_fft 16384
   # - &max_fft 8192
   # - &max_fft 4096 # GalSim default (likely want higher)
-  - &bal_dir '/data/des81.a/data/mtabbutt/Y6_integrations/Balrog-GalSim/'
-  - &ngmix_dir '/data/des81.a/data/mtabbutt/Y6_integrations/inputs/'
+  - &bal_dir '/data/des81.a/data/mtabbutt/BalrogY6/Balrog-GalSim/'
+  - &ngmix_dir '/data/des81.a/data/mtabbutt/BalrogY6/inputs/'
   - &ngmix_file 'BALROG_RUN2_DEEP_CAT_FLAG0INVHS1BDFLT245.fits'
   #- &star_dir '/data/des81.a/data/mtabbutt/Y6_integrations/inputs/'
 
@@ -139,7 +139,7 @@ image :
         ngmix_catalog:
             type : 'HexGrid'
             #grid_type : 'HexGrid'
-            grid_spacing : 800 # arcsec
+            grid_spacing : 20 # arcsec
             #inj_frac : 1.0 # its fraction not arcsec
             offset : 'Random'
             rotate : 'Random'
