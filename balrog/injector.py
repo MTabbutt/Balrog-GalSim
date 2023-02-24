@@ -44,7 +44,7 @@ class BalrogImageBuilder(AddOnImageBuilder):
         extra_ignore = ignore + ['tile_list', 'geom_file', 'tile_dir', 'config_dir', 'psf_dir',
                                  'version', 'run_name', 'bands', 'n_objects', 'n_realizations',
                                  'object_density', 'inj_objs_only', 'pos_sampling', 'realizations',
-                                 'extinct_objs', 'rotate_objs']
+                                 'extinct_objs', 'rotate_objs', 'injection_scheme']
 
         # There are additionally the keywords `N_{inj_type}` that we want to ignore
         for key in config:
