@@ -181,12 +181,18 @@ class BalInjectionCatalog(object):
                     
                     # Create the list of weights from the DF catalog tuples and normalize
                     print("starting Alex scheme")
-                    Y3_weights = [config.input_cats[input_type][i][-3] for i in range(input_nobjects)]
+                    Y3_weights = [config.input_cats[input_type][i][-5] for i in range(input_nobjects)]
                     Y3_weights = Y3_weights/sum(Y3_weights)
-                    WL_weights = [config.input_cats[input_type][i][-2] for i in range(input_nobjects)]
+                    
+                    WL_weights = [config.input_cats[input_type][i][-4] for i in range(input_nobjects)]
                     WL_weights = WL_weights/sum(WL_weights)
-                    LSS_weights = [config.input_cats[input_type][i][-1] for i in range(input_nobjects)]
+                    WL_weights_highQz = [config.input_cats[input_type][i][-3] for i in range(input_nobjects)]
+                    WL_weights_highQz = WL_weights_highQz/sum(WL_weights_highQz)
+                    
+                    LSS_weights = [config.input_cats[input_type][i][-2] for i in range(input_nobjects)]
                     LSS_weights = LSS_weights/sum(LSS_weights)
+                    LSS_weights_highQz = [config.input_cats[input_type][i][-1] for i in range(input_nobjects)]
+                    LSS_weights_highQz = LSS_weights_highQz/sum(LSS_weights_highQz)
                     
                     # Rnadomly fill in a list of the correct size with 1/3 indexes from each scheme with random
                     # selection based on the weights of the DF objects
@@ -208,28 +214,49 @@ class BalInjectionCatalog(object):
                     choices = random.choices(range(input_nobjects), weights=Y3_weights, k=leng)
                     for idx, elem in enumerate(insert_idx_arr[:leng]):
                         target_list[elem] = choices[idx]
-                        scheme_key_arr[elem] = "Y3_weights"
+                        scheme_key_arr[elem] = "Y3_weight"
                     insert_idx_arr = insert_idx_arr[leng:]
  
+
                     # Second third is done with WL_weights:
-                    leng = remaining_list_length // 2
+                    # Half of this third is random
+                    leng = remaining_list_length // 4
                     remaining_list_length = remaining_list_length - leng
                     choices = random.choices(range(input_nobjects), weights=WL_weights, k=leng)
                     for idx, elem in enumerate(insert_idx_arr[:leng]):
                         target_list[elem] = choices[idx]
-                        scheme_key_arr[elem] = "WL_weights"
+                        scheme_key_arr[elem] = "WL_weight"
                     insert_idx_arr = insert_idx_arr[leng:]
+                                        
+                    # Half of this third is gaurenteed high quality z info
+                    remaining_list_length = remaining_list_length - leng
+                    choices = random.choices(range(input_nobjects), weights=WL_weights_highQz, k=leng)
+                    for idx, elem in enumerate(insert_idx_arr[:leng]):
+                        target_list[elem] = choices[idx]
+                        scheme_key_arr[elem] = "WL_weight_highQz"
+                    insert_idx_arr = insert_idx_arr[leng:]
+                   
 
-                    # First third is done with Y3_weights:
-                    leng = remaining_list_length
+                    # final third is done with LSS_weights:
+                    # Half of this third is random
+                    remaining_list_length = remaining_list_length - leng
                     choices = random.choices(range(input_nobjects), weights=LSS_weights, k=leng)
                     for idx, elem in enumerate(insert_idx_arr[:leng]):
                         target_list[elem] = choices[idx]
-                        scheme_key_arr[elem] = "LSS_weights"
-
+                        scheme_key_arr[elem] = "LSS_weight"
+                    insert_idx_arr = insert_idx_arr[leng:]
+                    
+                    # Half of this third is gaurenteed high quality z info
+                    # Half of this third is gaurenteed high quality z info
+                    leng = remaining_list_length
+                    choices = random.choices(range(input_nobjects), weights=LSS_weights_highQz, k=leng)
+                    for idx, elem in enumerate(insert_idx_arr[:leng]):
+                        target_list[elem] = choices[idx]
+                        scheme_key_arr[elem] = "LSS_weight_highQz"
+                    
+                    
                     self.indx[real] = np.array(target_list).astype(int)
                     self.scheme[real] = np.array(scheme_key_arr)
-                    
                     print("Done Alex scheme")
 
                     
