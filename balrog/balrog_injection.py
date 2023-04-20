@@ -56,6 +56,9 @@ def parse_args():
     # Optional argument for verbose messages
     parser.add_argument('-v', '--verbose', action='store', nargs='?', default='0', const='1', type=int,
                         help='Turn on verbose mode for additional messages.')
+    
+    #parser.add_argument('-s', '--randseed', action='store', nargs='?', default=None, const='1', type=int,
+                        #help='Provide a Random Seed if desired for all random calls during Balrog.')
 
     return parser.parse_args()
 

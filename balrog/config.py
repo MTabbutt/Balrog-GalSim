@@ -6,6 +6,8 @@ import galsim
 from collections import OrderedDict
 from astropy.io import fits
 import warnings
+import random
+from datetime import datetime
 
 # Balrog files
 import tile as Tile
@@ -61,6 +63,7 @@ class Config(BaseConfig):
         self.output_dir = args.output_dir
         self.vb = args.verbose
         self.nproc = args.nproc
+        
 
         # NOTE: Most type checking of previous command-line args
         # (tile_list, geom_file, etc.) is handled in 'read_bal_gs_config()'
@@ -173,6 +176,14 @@ class Config(BaseConfig):
         self.inj_objs_only = im['inj_objs_only']
         self.pos_sampling = im['pos_sampling']
         self.rotate_objs = im['rotate_objs']
+        self.random_seed = im['random_seed']
+        
+        print(self.random_seed)
+        
+        
+        # SET THE RANDOM SEED FOR THE WHOLE RUN:
+        random.seed(self.random_seed)
+        np.random.seed(self.random_seed)
         
         # MEGAN ADDED
         if 'injection_scheme' in im:
@@ -244,8 +255,16 @@ class Config(BaseConfig):
                 if val is None:
                     val = 1
                 self.nproc = val
+            #MEGAN ADDED
+            #elif arg == 'randseed':
+                #if val is None:
+                    #val = random.randrange(4294967295)
+                #self.randseed = val
             # Can add others if needed
             # elif ...
+            
+        #print("random seed: ", self.randseed)
+            
 
         return
 

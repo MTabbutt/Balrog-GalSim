@@ -54,8 +54,8 @@ stamp :
 
 image :
     # ADD a random seed or one will be selected:
-    random_seed : 561483259
-    
+    random_seed : 1051959766
+
     # For injected images:
     noise : {}
     type : Balrog # Same as AddOn, but with some additional input attributes and checking
@@ -81,7 +81,7 @@ image :
         ngmix_catalog:
             type : 'HexGrid'
             #grid_type : 'HexGrid'
-            grid_spacing : 20 # arcsec
+            grid_spacing : 800 # arcsec
             #inj_frac : 1.0 # its fraction not arcsec
             offset : 'Random'
             rotate : 'Random'

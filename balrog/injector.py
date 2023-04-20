@@ -3,6 +3,7 @@ import galsim.config.stamp as stamp
 import logging
 import os
 import numpy as np
+import random
 
 # Balrog files
 import grid
@@ -466,7 +467,16 @@ def parse_bal_image_inputs(config, base):
             and (config['pos_sampling'][inpt]['type'] not in bg._valid_mixed_types):
                 raise ValueError('Must pass one of `n_objects` or `object_density` for '
                                  'input {} if not injecting on a grid!'.format(inpt))
-
+                
+                
+                
+    # Process randomseed, if there is no randomseed set one: 
+    
+    if 'random_seed' not in config:
+        val = random.randrange(4294967295)
+        config['random_seed'] = val
+    
+    
     return config
 
 # --------------------------------------------------------------------------------------------------

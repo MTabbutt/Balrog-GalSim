@@ -13,6 +13,7 @@ import subprocess
 import datetime
 import time
 import shutil # Megan added
+import random
 
 # Balrog files
 from chip import Chip
@@ -223,7 +224,7 @@ class Tile(object):
         with open(config.gs_config_file) as f:
             list_doc = yaml.safe_load_all(f)
             self.bal_config = list(list_doc)
-
+        
         # Keep track of length of the multi-output yaml config file; want to make sure that
         # any major changes are monitored
         # Should have been enforced in gs_config init; just to make sure!
@@ -236,17 +237,25 @@ class Tile(object):
             self.bal_config[0]['image'].update({'nproc':config.nproc})
         except KeyError:
             self.bal_config[0]['image'] = {'nproc':config.nproc}
-
-        self._set_seed()
-
+            
+        try:
+            self.bal_config[0]['image'].update({'random_seed':config.random_seed})
+        except KeyError:
+            self.bal_config[0]['image'] = {'random_seed':config.random_seed}
+            
+        print(self.bal_config[0]['image']['random_seed'])
+        
+        #self._set_seed()
+        
         return
 
-    def _set_seed(self):
-        if 'random_seed' not in self.bal_config[0]['image']:
+    #def _set_seed(self):
+        #if 'random_seed' not in self.bal_config[0]['image']:
+            #print("config", self.config)
             # Current time in microseconds
-            self.bal_config[0]['image']['random_seed'] = int(time.time()*1e6)
+            #self.bal_config[0]['image']['random_seed'] = 0  
 
-        return
+        #return
 
     def _load_zeropoints(self, config, s_begin=0, s_end=4):
         '''
@@ -458,7 +467,13 @@ class Tile(object):
         except KeyError:
             self.bal_config[0]['image'] = {'nproc':config.nproc}
 
-        self._set_seed()
+        try:
+            self.bal_config[0]['image'].update({'random_seed':config.random_seed})
+        except KeyError:
+            self.bal_config[0]['image'] = {'random_seed':config.random_seed}
+            
+        print(self.bal_config[0]['image']['random_seed'])
+        #self._set_seed()
 
         return
 
