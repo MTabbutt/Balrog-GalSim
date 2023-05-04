@@ -33,11 +33,11 @@ class BaseConfig(object):
     _allowed_bands = 'griz'
 
     # TODO: Allow Piff when available!
-    _supported_psf_types = ['DES_PSFEx']#, 'Piff'}
-    _no_pixel_psfs = ['DES_PSFEx']#, 'Piff'}
-    _psf_extensions = {'DES_PSFEx' : 'psfexcat.psf'}#, 'Piff' : 'something.piff'}
+    _supported_psf_types = ['DES_PSFEx', 'DES_Piff']#, 'Piff'}
+    _no_pixel_psfs = ['DES_PSFEx', 'DES_Piff']#, 'Piff'}
+    _psf_extensions = {'DES_PSFEx' : 'psfexcat.psf', 'DES_Piff':'piff-model.fits'}#, 'Piff' : 'something.piff'}
 
-    _non_inj_input_types = ['power_spectrum', 'nfw_halo', 'des_psfex', '_get']
+    _non_inj_input_types = ['power_spectrum', 'nfw_halo', 'des_psfex', '_get', 'des_piff']
 
     _valid_pos_sampling = ['uniform', 'sahar', 'RectGrid', 'HexGrid', 'MixedGrid']
     _valid_noise_types = ['CCD', 'BKG', 'BKG+CCD', 'BKG+RN', 'BKG+SKY', 'None', None]
@@ -86,6 +86,10 @@ class Config(BaseConfig):
             self.ext_factors = None
 
         return
+    
+    def get_psf_type(self):
+        
+        return self.gs_config[0]['psf']['type']
 
     def _read_gs_config(self):
         # Process .yaml config file

@@ -598,9 +598,13 @@ galsim.config.RegisterInputType('ngmix_catalog', ngmixCatalogLoader(ngmixCatalog
 
 def BuildNgmixGalaxy(config, base, ignore, gsparams, logger):
     """ Build a NgmixGalaxy type GSObject from user input."""
+    
 
     ngmix_cat = galsim.config.GetInputObj('ngmix_catalog', config, base, 'NgmixGalaxy')
-
+    
+    #base['psf']['gi_color'] = 2.222
+    #base['psf']['iz_color'] = 2.222
+    #base['psf']['depixelize'] = false
 
     # If galaxies are selected based on index, and index is Sequence or Random, and max
     # isn't set, set it to nobjects-1.

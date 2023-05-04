@@ -3,6 +3,12 @@ modules :
   - injector
   - ngmix_catalog
   #- des_star_catalog
+  - galsim_extra
+  - montara
+  - numpy
+  - eastlake
+  - eastlake.des_piff #PIFF
+  
 
 some_variables :
   # Pick a maximum fft size
@@ -42,7 +48,8 @@ gal :
 psf :
     # For DES chip images with PSFEx files
     # In future, Piff PSFs may be used instead
-    type : DES_PSFEx
+    #type : DES_PSFEx
+    type : DES_Piff #PIFF
 
 stamp :
     type : Balrog
@@ -54,7 +61,7 @@ stamp :
 
 image :
     # ADD a random seed or one will be selected:
-    random_seed : 1051959766
+    random_seed : 2515548553
 
     # For injected images:
     noise : {}
@@ -81,7 +88,7 @@ image :
         ngmix_catalog:
             type : 'HexGrid'
             #grid_type : 'HexGrid'
-            grid_spacing : 800 # arcsec
+            grid_spacing : 20 # arcsec
             #inj_frac : 1.0 # its fraction not arcsec
             offset : 'Random'
             rotate : 'Random'

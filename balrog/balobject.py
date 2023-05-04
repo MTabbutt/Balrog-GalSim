@@ -57,6 +57,8 @@ class BalInjectionCatalog(object):
         # self.cat = None
 
         return
+    
+
 
     def generate_objects(self, config, realization, mixed_grid=None):
         # Generate positions and indices if this is the first realization

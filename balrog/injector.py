@@ -475,7 +475,13 @@ def parse_bal_image_inputs(config, base):
     if 'random_seed' not in config:
         val = random.randrange(4294967295)
         config['random_seed'] = val
-    
+        
+        
+    #if base['psf']['type'] == 'DES_Piff':
+        #print('PIFF')
+        
+        #config['psf']['gi_color']['items'] = config['gal']['piff_GI_color']['items']
+        #config['psf']['iz_color']['items'] = config['gal']['piff_IZ_color']['items']
     
     return config
 

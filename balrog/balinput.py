@@ -124,7 +124,7 @@ class DESInputCatalog(InputCatalog):
     def __init__(self, input_type, gsconfig, indx=None, tilename=None):
         super(DESInputCatalog, self).__init__(input_type, gsconfig, indx, tilename=tilename)
 
-        if not (self.data_version == 'y3v02'):
+        if not ((self.data_version == 'y3v02') or ("des-pizza" in self.data_version)):
             print('WARNING: Unrecognized data version of {} '.format(self.data_version) +
                   'Assumming a magnitude zeropoint of 30!')
             self.input_zp = 30.0
