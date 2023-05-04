@@ -3,6 +3,7 @@ import galsim.config.stamp as stamp
 import logging
 import os
 import numpy as np
+import random
 
 # Balrog files
 import grid
@@ -44,7 +45,7 @@ class BalrogImageBuilder(AddOnImageBuilder):
         extra_ignore = ignore + ['tile_list', 'geom_file', 'tile_dir', 'config_dir', 'psf_dir',
                                  'version', 'run_name', 'bands', 'n_objects', 'n_realizations',
                                  'object_density', 'inj_objs_only', 'pos_sampling', 'realizations',
-                                 'extinct_objs', 'rotate_objs']
+                                 'extinct_objs', 'rotate_objs', 'injection_scheme']
 
         # There are additionally the keywords `N_{inj_type}` that we want to ignore
         for key in config:
@@ -254,20 +255,20 @@ def parse_bal_image_inputs(config, base):
             if not isinstance(band, str):
                 raise TypeError('Each passed band must be a string!')
     except KeyError:
-        print 'config[bands]=',config['bands']
+        print('config[bands]=', config['bands'])
         raise KeyError('Must specify which bands are to be used for injection!')
 
     # Process input 'version'
     if 'version' not in config:
         # Warn user, but assume y3v02 for now
-        print('DEFAULT WARNING: Data version not passed in config! ' +\,
+        print('DEFAULT WARNING: Data version not passed in config! ' +\
               'Using none, which may cause problems')
         config['data_version'] = ''
 
     # Process input 'run_name'
     try:
         rname = config['run_name']
-        if not isinstance(rname, basestring):
+        if not isinstance(rname, str): #Megan changed "basestring" to "str"
             raise ValueError('The input `run_name` must be a string!')
     except KeyError:
         # TODO: Maybe come up with sensible default run name?
@@ -280,7 +281,7 @@ def parse_bal_image_inputs(config, base):
     valid_rot_types = ['Random']
     try:
         rotate = config['rotate_objs']
-        if isinstance(rotate, basestring):
+        if isinstance(rotate, str):
             if rotate not in valid_rot_types:
                 raise ValueError('`{}` is not a valid rotation type! '.format(rotate) +
                                  'For now, only {} are valid.'.format(valid_rot_types))
@@ -350,7 +351,7 @@ def parse_bal_image_inputs(config, base):
             } for inpt in input_list}
         ps = config['pos_sampling']
 
-    if isinstance(ps, basestring):
+    if isinstance(ps, str):
         # Then the string is the input type
         if ps not in valid_pos_sampling:
             raise ValueError('{} is not a valid position sampling method. '.format(ps) +
@@ -398,7 +399,8 @@ def parse_bal_image_inputs(config, base):
                                             'when using a `MixedGrid`!')
                     if not isinstance(val, float):
                         raise TypeError('`inj_frac` must be a float!')
-                    if val <= 0 or val >= 1:
+                    if val <= 0 or val >= 1: #MEGAN CHANGED THIS
+                    #if val < 0 or val > 1:
                         raise ValueError('`inj_frac` must be between 0 and 1!')
 
                 if key == 'grid_spacing':
@@ -465,7 +467,22 @@ def parse_bal_image_inputs(config, base):
             and (config['pos_sampling'][inpt]['type'] not in bg._valid_mixed_types):
                 raise ValueError('Must pass one of `n_objects` or `object_density` for '
                                  'input {} if not injecting on a grid!'.format(inpt))
-
+                
+                
+                
+    # Process randomseed, if there is no randomseed set one: 
+    
+    if 'random_seed' not in config:
+        val = random.randrange(4294967295)
+        config['random_seed'] = val
+        
+        
+    #if base['psf']['type'] == 'DES_Piff':
+        #print('PIFF')
+        
+        #config['psf']['gi_color']['items'] = config['gal']['piff_GI_color']['items']
+        #config['psf']['iz_color']['items'] = config['gal']['piff_IZ_color']['items']
+    
     return config
 
 # --------------------------------------------------------------------------------------------------

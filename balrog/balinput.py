@@ -13,7 +13,7 @@ import filters
 
 class BalInput(object):
     def __init__(self, input_type, gsconfig, indx=None, tilename=None):
-        if not isinstance(input_type, basestring):
+        if not isinstance(input_type, str):
             raise TypeError('`input_type` must be a string!')
         self.input_type = input_type
 
@@ -71,7 +71,7 @@ class InputCatalog(BalInput):
 
         # Need to remove other input types as they may not have been registered
         # by GalSim yet
-        for inpt in conf['input']:
+        for inpt in list(conf['input']): # MEGAN CHANGED THIS
             if inpt != self.input_type:
                 conf['input'].pop(inpt)
 
@@ -124,7 +124,7 @@ class DESInputCatalog(InputCatalog):
     def __init__(self, input_type, gsconfig, indx=None, tilename=None):
         super(DESInputCatalog, self).__init__(input_type, gsconfig, indx, tilename=tilename)
 
-        if not (self.data_version == 'y3v02'):
+        if not ((self.data_version == 'y3v02') or ("des-pizza" in self.data_version)):
             print('WARNING: Unrecognized data version of {} '.format(self.data_version) +
                   'Assumming a magnitude zeropoint of 30!')
             self.input_zp = 30.0
@@ -197,7 +197,7 @@ class DESStarInputCatalog(DESInputCatalog):
         # TODO: Can we grab the injection type from the registered GS catalog?
         self.inj_type = 'desStar'
 
-        if self.data_version == 'y3v02':
+        if (self.data_version[:19] == 'des-pizza-slices-y6') or (self.data_version == 'y3v02'): # MEGAN CHANGED previous: 'y3v02'
             import des_star_catalog
             valid_model_types = des_star_catalog.return_valid_model_types(
                                     data_version=self.data_version)

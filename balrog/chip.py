@@ -6,6 +6,10 @@ from astropy.io import fits
 import fitsio
 import warnings
 
+import yaml
+from yaml.loader import SafeLoader
+
+
 # Balrog files
 import config as Config
 
@@ -68,18 +72,58 @@ class Chip(object):
         Set the psf type / configuration for the chip.
         '''
         # Can load in type from global GalSim config file
+        
         try:
             # If present, grab config psf type
             self.psf_type = config.gs_config[0]['psf']['type']
 
             # Check if PSF type is supported
             if self.psf_type in config._supported_psf_types:
-                self.psf_extension = config._psf_extensions[self.psf_type]
-                # NOTE: Due to peculiarities of DES_PSFEx GalSim class, we cannot keep psf
-                # dir and filename separate; must be combined for an absolute path. This is
-                # due to the psf file and chip file being stored in different directories.
-                self.psf_dir = os.path.join(config.tile_dir, self.tile_name, config.psf_dir)
-                self.psf_filename = os.path.join(self.psf_dir, self.name + '_' + self.psf_extension)
+                
+                if self.psf_type == "DES_PSFEx":
+                    self.psf_extension = config._psf_extensions[self.psf_type]
+                    # NOTE: Due to peculiarities of DES_PSFEx GalSim class, we cannot keep psf
+                    # dir and filename separate; must be combined for an absolute path. This is
+                    # due to the psf file and chip file being stored in different directories.
+                    self.psf_dir = os.path.join(config.tile_dir, self.tile_name, config.psf_dir)
+                    self.psf_filename = os.path.join(self.psf_dir, self.name + '_' + self.psf_extension)
+                    
+                elif self.psf_type == "DES_Piff":
+                    
+                    """
+                    # Get the PIFF dir from the pizza-cutter yaml!
+                    pth = os.path.join(config.tile_dir, "pizza_cutter_info")
+                    for file in os.listdir(pth):
+                        if file[13] == self.band and file [-4:] =="yaml":
+                            pth = os.path.join(pth, file)
+                            break
+                            
+                    with open(pth) as f:
+                        cutter_data = yaml.load(f, Loader=SafeLoader)
+                        
+                    # Need to split out the naming convenstions for specific chips in order to get the psf path
+                    name_pieces = self.name.split("_")
+                    dNum, bandPiece, chipPiece, reqNum = name_pieces[0], name_pieces[1], name_pieces[2], name_pieces[3]           
+                    exp =  int(dNum[3:])
+                    ccd = int(chipPiece[1:])
+
+                    image_info = None
+                    for item in cutter_data['src_info']:
+                        if item['ccdnum'] == ccd and item['expnum'] == exp:
+                            image_info = item
+
+                    PIFF_PTH = image_info['piff_path']
+                    self.psf_filename = PIFF_PTH 
+                    """
+                    
+                    self.psf_filename = ""
+                    
+                else: 
+                    # Some basic GalSim psf types will still work, even if not technically supported
+                    print('Warning: PSF type input {} is not one of the currently supported Balrog' \
+                          + 'types: {}'.format(_supported_psf_types))
+                    self.psf_extension = None
+                    self.psf_filename = None                    
 
             else:
                 # Some basic GalSim psf types will still work, even if not technically supported
@@ -96,6 +140,8 @@ class Chip(object):
                          + 'supported types are {}'.format(_supported_psf_types))
             self.psf_extension = None
             self.psf_filename = None
+            
+            
         return
 
     def _set_wcs(self):
@@ -139,13 +185,17 @@ class Chip(object):
         self.decmin, self.decmax = hdr['DECCMIN'], hdr['DECCMAX']
         rc = [hdr['RAC1'], hdr['RAC2'], hdr['RAC3'], hdr['RAC4']]
         dc = [hdr['DECC1'], hdr['DECC2'], hdr['DECC3'], hdr['DECC4']]
-        self.corners = zip(rc,dc)
-
+        #self.corners = zip(rc,dc)
+        self.corners = [[hdr['RAC1'], hdr['DECC1']], [hdr['RAC2'], hdr['DECC2']], 
+                        [hdr['RAC3'], hdr['DECC3']], [hdr['RAC4'], hdr['DECC4']]] #MEGAN changed this to avoid error:
+        # TypeError: Cannot cast array data from dtype('O') to dtype('float64') according to the rule 'safe' 
+        
         # Round to nearest pixel (very slight offset)
         #NOTE: Should always be (2048x4096), but in principle could allow
         # different sizes
-        self.corners_im = np.round(self.wcs.wcs_world2pix(self.corners,1))
-
+        
+        self.corners_im = np.round(self.wcs.wcs_world2pix(self.corners, 1))
+        #print("self.corners_im", self.corners_im)
         # Set naxis_im ranges (not (RA,DEC) ranges due to NOTE above)
         #NOTE: should be able to retrieve from header NAXISi, but just
         # to be sure...

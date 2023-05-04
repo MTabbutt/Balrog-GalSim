@@ -5,6 +5,7 @@ import ngmix
 import os
 import copy
 from numpy.lib.recfunctions import append_fields
+import random
 
 # Balrog files
 import mathutil as util
@@ -30,6 +31,7 @@ class BalInjectionCatalog(object):
         self.pos = None
         self.indx = None
         self.nobjects = None
+        self.scheme = None
 
         self.truth_outfile = {}
 
@@ -55,6 +57,8 @@ class BalInjectionCatalog(object):
         # self.cat = None
 
         return
+    
+
 
     def generate_objects(self, config, realization, mixed_grid=None):
         # Generate positions and indices if this is the first realization
@@ -64,6 +68,10 @@ class BalInjectionCatalog(object):
             self.indx = {}
             self.rotate = {}
             self.nobjects= {}
+            
+            # Megan Added
+            if config.injection_scheme == "Alex":
+                self.scheme = {}
 
             input_type = self.input_type
             input_nobjects = config.input_nobjects[input_type]
@@ -160,9 +168,106 @@ class BalInjectionCatalog(object):
                     # An error should have already occured, but just in case:
                     raise ValueError('Position sampling type {} is not valid!'.format(gtype))
 
-                # Generate object indices (in input catalog)
-                indices = np.random.choice(xrange(input_nobjects), size=inj_nobjs)
-                self.indx[real] = indices
+                
+                #MEGAN added: Want to be able to do a new injection scheme where we inject at a specific rate 
+                # based on the DF object's i band magnitude. 
+                if config.injection_scheme == "Alex":
+                    # config.input_cats[input_type].shape = (73000, )
+                    #print(type(config.input_cats[input_type]))
+                    # config.input_cats[input_type][i] -> tuple corresponding to the columns of a DF cat
+                    # last three columns should be Y3_weight, WL_weight, LSS_weight
+                    #print(config.input_cats[input_type][0])
+                    
+                    # inj_nobjs = the number of objects to inject = target_list_length
+                    # range(input_nobjects) is 0 to length of DF catalog
+                    
+                    # Create the list of weights from the DF catalog tuples and normalize
+                    print("starting Alex scheme")
+                    Y3_weights = [config.input_cats[input_type][i][-5] for i in range(input_nobjects)]
+                    Y3_weights = Y3_weights/sum(Y3_weights)
+                    
+                    WL_weights = [config.input_cats[input_type][i][-4] for i in range(input_nobjects)]
+                    WL_weights = WL_weights/sum(WL_weights)
+                    WL_weights_highQz = [config.input_cats[input_type][i][-3] for i in range(input_nobjects)]
+                    WL_weights_highQz = WL_weights_highQz/sum(WL_weights_highQz)
+                    
+                    LSS_weights = [config.input_cats[input_type][i][-2] for i in range(input_nobjects)]
+                    LSS_weights = LSS_weights/sum(LSS_weights)
+                    LSS_weights_highQz = [config.input_cats[input_type][i][-1] for i in range(input_nobjects)]
+                    LSS_weights_highQz = LSS_weights_highQz/sum(LSS_weights_highQz)
+                    
+                    # Rnadomly fill in a list of the correct size with 1/3 indexes from each scheme with random
+                    # selection based on the weights of the DF objects
+                    target_list_length = inj_nobjs
+                    target_list = [None]*target_list_length
+                    remaining_list_length = target_list_length
+                
+                    # Create the random ordering of indexes to fill in the injection array randomly
+                    insert_idx_arr = [i for i in range(target_list_length)]
+                    insert_idx_arr = np.array(insert_idx_arr).astype(int)
+                    random.shuffle(insert_idx_arr)
+                    
+                    # Track the scheme that was used
+                    scheme_key_arr = [None]*target_list_length
+
+                    # First third is done with Y3_weights:
+                    leng = remaining_list_length // 3
+                    remaining_list_length = remaining_list_length - leng
+                    choices = random.choices(range(input_nobjects), weights=Y3_weights, k=leng)
+                    for idx, elem in enumerate(insert_idx_arr[:leng]):
+                        target_list[elem] = choices[idx]
+                        scheme_key_arr[elem] = "Y3_weight"
+                    insert_idx_arr = insert_idx_arr[leng:]
+ 
+
+                    # Second third is done with WL_weights:
+                    # Half of this third is random
+                    leng = remaining_list_length // 4
+                    remaining_list_length = remaining_list_length - leng
+                    choices = random.choices(range(input_nobjects), weights=WL_weights, k=leng)
+                    for idx, elem in enumerate(insert_idx_arr[:leng]):
+                        target_list[elem] = choices[idx]
+                        scheme_key_arr[elem] = "WL_weight"
+                    insert_idx_arr = insert_idx_arr[leng:]
+                                        
+                    # Half of this third is gaurenteed high quality z info
+                    remaining_list_length = remaining_list_length - leng
+                    choices = random.choices(range(input_nobjects), weights=WL_weights_highQz, k=leng)
+                    for idx, elem in enumerate(insert_idx_arr[:leng]):
+                        target_list[elem] = choices[idx]
+                        scheme_key_arr[elem] = "WL_weight_highQz"
+                    insert_idx_arr = insert_idx_arr[leng:]
+                   
+
+                    # final third is done with LSS_weights:
+                    # Half of this third is random
+                    remaining_list_length = remaining_list_length - leng
+                    choices = random.choices(range(input_nobjects), weights=LSS_weights, k=leng)
+                    for idx, elem in enumerate(insert_idx_arr[:leng]):
+                        target_list[elem] = choices[idx]
+                        scheme_key_arr[elem] = "LSS_weight"
+                    insert_idx_arr = insert_idx_arr[leng:]
+                    
+                    # Half of this third is gaurenteed high quality z info
+                    # Half of this third is gaurenteed high quality z info
+                    leng = remaining_list_length
+                    choices = random.choices(range(input_nobjects), weights=LSS_weights_highQz, k=leng)
+                    for idx, elem in enumerate(insert_idx_arr[:leng]):
+                        target_list[elem] = choices[idx]
+                        scheme_key_arr[elem] = "LSS_weight_highQz"
+                    
+                    
+                    self.indx[real] = np.array(target_list).astype(int)
+                    self.scheme[real] = np.array(scheme_key_arr)
+                    print("Done Alex scheme")
+
+                    
+                # Just do the fiducial Y3 scheme and inject randomly from the input DF catalog    
+                else:    
+                    # Generate object indices (in input catalog)
+                    indices = np.random.choice(range(input_nobjects), size=inj_nobjs) #MEGAN changed from xrange()
+                    self.indx[real] = indices 
+                
 
                 # Generate object rotation angles, if desired
                 if config.rotate_objs is True:
@@ -283,6 +388,9 @@ class BalInjectionCatalog(object):
 
         if self.rotate[real] is not None:
             self.update_truth_shapes(config, truth_cat, real)
+            
+        if self.scheme[real] is not None:   
+            self.add_scheme_column(config, truth_cat, real)
 
     def update_truth_shapes(self, config, truth_cat, real):
         # Only here to be inherited by subclasses, but not bothering with
@@ -393,8 +501,20 @@ class NGMIXInjectionCatalog(DESInjectionCatalog):
                                                  'rotation',
                                                  theta,
                                                  usemask=False)
+        
+        
+     
 
         return
+    
+    # megan added
+    def add_scheme_column(self, config, truth_cat, real):
+        truth_cat[self.inj_type] = append_fields(truth_cat[self.inj_type],
+                                                 'weight_scheme',
+                                                 self.scheme[real],
+                                                 usemask=False)
+    
+    
 
 class MEDSInjectionCatalog(DESInjectionCatalog):
     def generate_objects(self, config, realization, mixed_grid=None):

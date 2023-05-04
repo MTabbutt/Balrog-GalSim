@@ -6,6 +6,8 @@ import galsim
 from collections import OrderedDict
 from astropy.io import fits
 import warnings
+import random
+from datetime import datetime
 
 # Balrog files
 import tile as Tile
@@ -31,11 +33,11 @@ class BaseConfig(object):
     _allowed_bands = 'griz'
 
     # TODO: Allow Piff when available!
-    _supported_psf_types = ['DES_PSFEx']#, 'Piff'}
-    _no_pixel_psfs = ['DES_PSFEx']#, 'Piff'}
-    _psf_extensions = {'DES_PSFEx' : 'psfexcat.psf'}#, 'Piff' : 'something.piff'}
+    _supported_psf_types = ['DES_PSFEx', 'DES_Piff']#, 'Piff'}
+    _no_pixel_psfs = ['DES_PSFEx', 'DES_Piff']#, 'Piff'}
+    _psf_extensions = {'DES_PSFEx' : 'psfexcat.psf', 'DES_Piff':'piff-model.fits'}#, 'Piff' : 'something.piff'}
 
-    _non_inj_input_types = ['power_spectrum', 'nfw_halo', 'des_psfex', '_get']
+    _non_inj_input_types = ['power_spectrum', 'nfw_halo', 'des_psfex', '_get', 'des_piff']
 
     _valid_pos_sampling = ['uniform', 'sahar', 'RectGrid', 'HexGrid', 'MixedGrid']
     _valid_noise_types = ['CCD', 'BKG', 'BKG+CCD', 'BKG+RN', 'BKG+SKY', 'None', None]
@@ -61,6 +63,7 @@ class Config(BaseConfig):
         self.output_dir = args.output_dir
         self.vb = args.verbose
         self.nproc = args.nproc
+        
 
         # NOTE: Most type checking of previous command-line args
         # (tile_list, geom_file, etc.) is handled in 'read_bal_gs_config()'
@@ -83,6 +86,10 @@ class Config(BaseConfig):
             self.ext_factors = None
 
         return
+    
+    def get_psf_type(self):
+        
+        return self.gs_config[0]['psf']['type']
 
     def _read_gs_config(self):
         # Process .yaml config file
@@ -173,6 +180,20 @@ class Config(BaseConfig):
         self.inj_objs_only = im['inj_objs_only']
         self.pos_sampling = im['pos_sampling']
         self.rotate_objs = im['rotate_objs']
+        self.random_seed = im['random_seed']
+        
+        print(self.random_seed)
+        
+        
+        # SET THE RANDOM SEED FOR THE WHOLE RUN:
+        random.seed(self.random_seed)
+        np.random.seed(self.random_seed)
+        
+        # MEGAN ADDED
+        if 'injection_scheme' in im:
+            self.injection_scheme = im['injection_scheme']
+            #print(self.injection_scheme)
+        else: self.injection_scheme = None
 
         self.bindx = dict(zip(self.bands, range(len(self.bands))))
 
@@ -238,8 +259,16 @@ class Config(BaseConfig):
                 if val is None:
                     val = 1
                 self.nproc = val
+            #MEGAN ADDED
+            #elif arg == 'randseed':
+                #if val is None:
+                    #val = random.randrange(4294967295)
+                #self.randseed = val
             # Can add others if needed
             # elif ...
+            
+        #print("random seed: ", self.randseed)
+            
 
         return
 

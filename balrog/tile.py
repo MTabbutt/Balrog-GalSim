@@ -5,6 +5,7 @@ import os, sys, errno
 import ntpath
 import fitsio
 import yaml
+from yaml.loader import SafeLoader
 import numpy as np
 from astropy import wcs
 from copy import deepcopy
@@ -12,6 +13,8 @@ import warnings
 import subprocess
 import datetime
 import time
+import shutil # Megan added
+import random
 
 # Balrog files
 from chip import Chip
@@ -94,6 +97,17 @@ class Tile(object):
 
         # Keep track if any injections into tile have been made
         self.has_injections = False
+        
+       
+        
+        # If need PIFF colors, read in the DF catalog and make dictionary of colors. 
+        if config.gs_config[0]['psf']['type'] == "DES_Piff":
+            self.colors_dict = dict()
+            for i in range(len(config.input_cats['ngmix_catalog'])):
+                gi_color = config.input_cats['ngmix_catalog'][i][22][0] - config.input_cats['ngmix_catalog'][i][22][2]
+                iz_color = config.input_cats['ngmix_catalog'][i][22][2] - config.input_cats['ngmix_catalog'][i][22][3]
+                self.colors_dict[i] = {'gi_color':float(gi_color),'iz_color':float(iz_color)}
+   
 
         return
 
@@ -179,18 +193,18 @@ class Tile(object):
         for band in self.bands:
             self.band_dir[band] = os.path.join(self.dir, 'nullwt-{}'.format(band))
             # Make band directory if it doesn't already exist
-	    try:
-	        os.makedirs(self.band_dir[band])
+            try:
+                os.makedirs(self.band_dir[band])
             except OSError as e:
-                if e.errno == errno.EACCES:
-                    # ok if directory already exists
-                    # print('permission error')
-                    pass
-                elif e.errno == errno.EEXIST:
-                    # ok if directory already exists
-                    pass
-                else:
-                    raise e
+                    if e.errno == errno.EACCES:
+                        # ok if directory already exists
+                        # print('permission error')
+                        pass
+                    elif e.errno == errno.EEXIST:
+                        # ok if directory already exists
+                        pass
+                    else:
+                        raise e
 
         return
 
@@ -222,7 +236,7 @@ class Tile(object):
         with open(config.gs_config_file) as f:
             list_doc = yaml.safe_load_all(f)
             self.bal_config = list(list_doc)
-
+        
         # Keep track of length of the multi-output yaml config file; want to make sure that
         # any major changes are monitored
         # Should have been enforced in gs_config init; just to make sure!
@@ -235,17 +249,25 @@ class Tile(object):
             self.bal_config[0]['image'].update({'nproc':config.nproc})
         except KeyError:
             self.bal_config[0]['image'] = {'nproc':config.nproc}
-
-        self._set_seed()
-
+            
+        try:
+            self.bal_config[0]['image'].update({'random_seed':config.random_seed})
+        except KeyError:
+            self.bal_config[0]['image'] = {'random_seed':config.random_seed}
+            
+        print(self.bal_config[0]['image']['random_seed'])
+        
+        #self._set_seed()
+        
         return
 
-    def _set_seed(self):
-        if 'random_seed' not in self.bal_config[0]['image']:
+    #def _set_seed(self):
+        #if 'random_seed' not in self.bal_config[0]['image']:
+            #print("config", self.config)
             # Current time in microseconds
-            self.bal_config[0]['image']['random_seed'] = int(time.time()*1e6)
+            #self.bal_config[0]['image']['random_seed'] = 0  
 
-        return
+        #return
 
     def _load_zeropoints(self, config, s_begin=0, s_end=4):
         '''
@@ -457,7 +479,13 @@ class Tile(object):
         except KeyError:
             self.bal_config[0]['image'] = {'nproc':config.nproc}
 
-        self._set_seed()
+        try:
+            self.bal_config[0]['image'].update({'random_seed':config.random_seed})
+        except KeyError:
+            self.bal_config[0]['image'] = {'random_seed':config.random_seed}
+            
+        print(self.bal_config[0]['image']['random_seed'])
+        #self._set_seed()
 
         return
 
@@ -499,7 +527,7 @@ class Tile(object):
                 print('No objects of type {} were passed on injection '.format(inj_type) +
                 'to chip {}. Skipping injection.'.format(chip.name))
             chip.types_injected += 1
-            if (Ninput==chip.types_injected) and (np.sum(chip.nobjects.values())>0):
+            if (Ninput==chip.types_injected) and (np.sum(list(chip.nobjects.values()))>0): #MEGAN added list()
                 self._final_config_check(config, chip, Ninput, inj_type)
 
             return
@@ -516,7 +544,7 @@ class Tile(object):
         # Now set up common config entries if chip's first injection
 
         if chip.setup_config is False:
-
+  
             # Setup 'image' field
             chip_file = chip.filename
             self.bal_config[i]['image'] = {
@@ -572,14 +600,49 @@ class Tile(object):
             self.bal_config[i]['stamp'] = {}
 
             # Setup the PSF
-            psf_file = chip.psf_filename
-            if psf_file is not None:
-                self.bal_config[i]['input'] = {
-                    'des_psfex' : {
-                        'file_name' : psf_file,
-                        'image_file_name' : chip_file,
+            if config.gs_config[0]['psf']['type'] == "DES_PSFEx":
+                psf_file = chip.psf_filename
+                if psf_file is not None:
+                    self.bal_config[i]['input'] = {
+                        'des_psfex' : {
+                            'file_name' : psf_file,
+                            'image_file_name' : chip_file,
+                        }
                     }
-                }
+            elif config.gs_config[0]['psf']['type'] == "DES_Piff":
+                
+                pth = os.path.join(config.tile_dir, "pizza_cutter_info")
+                for file in os.listdir(pth):
+                    if file[13] == chip.band and file [-4:] =="yaml":
+                        pth = os.path.join(pth, file)
+                with open(pth) as f:
+                    cutter_data = yaml.load(f, Loader=SafeLoader)
+                    
+                # Need to split out the naming convenstions for specific chips in order to get the psf path
+                name_pieces = chip.name.split("_")
+                dNum, bandPiece, chipPiece, reqNum = name_pieces[0], name_pieces[1], name_pieces[2], name_pieces[3]           
+                exp =  int(dNum[3:])
+                ccd = int(chipPiece[1:])
+                image_info = None
+                for item in cutter_data['src_info']:
+                    if item['ccdnum'] == ccd and item['expnum'] == exp:
+                        image_info = item
+                PIFF_PTH = image_info['piff_path']
+                psf_file = PIFF_PTH 
+                
+                # MEGAN NEEDS TO ADD gi, iz colors here
+                #psf_file = chip.psf_filename
+                if psf_file is not None:
+                    self.bal_config[i]['input'] = {
+                        'des_piff' : {
+                            'file_name' : psf_file,
+                            #'image_file_name' : chip_file,
+                        }
+                    }
+                
+                
+            else:
+                print("ERROR PSF TYPE NOT SET UP")
 
             # Setup 'output' field
             out_file = io.return_output_fname(config.output_dir,
@@ -675,8 +738,39 @@ class Tile(object):
                 self.bal_config[i]['gal'].update({
                     'rotate' : inj_rot.tolist()
                 })
-
-            # Any extra fields to be set for a given input are added here
+                
+                
+            # ADD in GI and IZ color if PIFF:
+            if config.gs_config[0]['psf']['type'] == "DES_Piff":
+                indices = inj_indx.tolist()
+                gi_colors = [self.colors_dict[i]['gi_color'] for i in indices]
+                iz_colors = [self.colors_dict[i]['iz_color'] for i in indices]
+                
+                """
+                self.bal_config[i]['psf_colors'].update({
+                'piff_colors' : {
+                    'type' : 'GI_IZ',
+                    'GI' : { 'type' : 'List', 'items' : gi_colors },
+                    'IZ' : { 'type' : 'List', 'items' : gi_colors }
+                }
+            })
+                """
+                
+                self.bal_config[i]['gal'].update({
+                    'piff_GI_color' : {
+                        'type' : 'List',
+                        'items' : gi_colors
+                    }
+                })
+                self.bal_config[i]['gal'].update({
+                    'piff_IZ_color' : {
+                        'type' : 'List',
+                        'items' : iz_colors
+                    }
+                })
+                
+                
+                
             inj_cat.build_single_chip_config(config, self.bal_config, chip, i)
 
         #-----------------------------------------------------------------------------------------------
@@ -728,6 +822,342 @@ class Tile(object):
             self.has_injections = True
 
         return
+    
+    
+    def add_gs_injection_PIFF(self, config, chip, input_type, real):
+        '''
+        This function appends the global GalSim config with an additional simulation to
+        be done using nullwt chip-specific infomation and Balrog injected object positions
+        in image coordinates.
+        
+        Adding in one field of PSF to the individual yamls
+        '''
+
+        assert input_type in config.input_types
+        inj_type = config.inj_types[input_type]
+
+        # Determine which Balrog objects are contained in chip, and
+        # get their image coordinates
+        inj_cat = self.inj_cats[input_type]
+        in_chip, pos_im = chip.contained_in_chip(inj_cat.pos[real])
+        inj_pos_im = pos_im[in_chip]
+        inj_indx = inj_cat.indx[real][in_chip]
+        assert len(inj_indx) == len(inj_pos_im)
+        chip.set_nobjects(len(inj_pos_im), inj_type)
+
+        Ninput = len(self.input_types)
+        Ninject = len(inj_indx)
+
+        # Skip chips with no injections, except for a few special cases
+        if (len(inj_indx) == 0) and (config.inj_objs_only['value'] is False):
+            if config.vb > 1:
+                print('No objects of type {} were passed on injection '.format(inj_type) +
+                'to chip {}. Skipping injection.'.format(chip.name))
+            chip.types_injected += 1
+            if (Ninput==chip.types_injected) and (np.sum(list(chip.nobjects.values()))>0): #MEGAN added list()
+                self._final_config_check(config, chip, Ninput, inj_type)
+
+            return
+
+        # If this is the first injection for the chip, then set up new entry in bal_config
+        if chip.setup_config is False:
+            self.add_bal_config_entry()
+
+        # Injection index
+        i = self.bal_config_len - 1
+        # i = self.bal_config_len - 1
+
+        #-----------------------------------------------------------------------------------------------
+        # Now set up common config entries if chip's first injection
+
+        if chip.setup_config is False:
+  
+            # Setup 'image' field
+            chip_file = chip.filename
+            self.bal_config[i]['image'] = {
+                'initial_image' : chip_file,
+                'wcs' : { 'file_name' : chip_file }
+            }
+
+            # The field `nobjects` will be set to the sum of each injection type contained
+            # in the chip
+            icount = 0
+            nobjs = ''
+            for itype in config.inj_types.values():
+                if icount == 0:
+                    pfx = '$'
+                else:
+                    pfx = '+'
+                nobjs += pfx + '@image.N_{}'.format(itype)
+                # Must initialize to 0 as size-zero injections are skipped
+                self.bal_config[i]['image']['N_{}'.format(itype)] = 0
+                icount +=1
+
+            self.bal_config[i]['image']['nobjects'] = nobjs
+
+            # TODO: Eventually, we should move the noise models to be specific for
+            # each BalObject
+            # If noise is to be added, do it here
+            if self.noise_model:
+                if self.noise_model in ['CCD', 'BKG+CCD']:
+                    self.bal_config[i]['image']['noise'] = {
+                        'type' : 'CCD',
+                        'sky_level_pixel' : chip.sky_sigma**2,
+                        'gain' : float(np.mean(chip.gain)),
+                        'read_noise' : float(np.mean(chip.read_noise))
+                    }
+                elif self.noise_model in ['BKG+RN', 'BKG+SKY']:
+                    if self.noise_model == 'BKG+RN':
+                        sigma = float(np.mean(chip.read_noise))
+                    elif self.noise_model == 'BKG+SKY':
+                        sigma = chip.sky_sigma
+                        self.bal_config[i]['image']['noise'] = {
+                            'type' : 'Gaussian',
+                            'sigma' : sigma
+                        }
+                if 'BKG' in self.noise_model:
+                    # Use chip background file as initial image instead
+                    self.bal_config[i]['image'].update({'initial_image' : chip.bkg_file})
+            # Can add more noise models here!
+            # elif ...
+
+            # These fields need nothing besides dict initialization
+            self.bal_config[i]['input'] = {}
+            self.bal_config[i]['gal'] = {}
+            self.bal_config[i]['psf'] = {}
+            self.bal_config[i]['stamp'] = {}
+
+            # Setup the PSF
+            if config.gs_config[0]['psf']['type'] == "DES_PSFEx":
+                psf_file = chip.psf_filename
+                if psf_file is not None:
+                    self.bal_config[i]['input'] = {
+                        'des_psfex' : {
+                            'file_name' : psf_file,
+                            'image_file_name' : chip_file,
+                        }
+                    }
+            elif config.gs_config[0]['psf']['type'] == "DES_Piff":
+                
+                pth = os.path.join(config.tile_dir, "pizza_cutter_info")
+                for file in os.listdir(pth):
+                    if file[13] == chip.band and file [-4:] =="yaml":
+                        pth = os.path.join(pth, file)
+                with open(pth) as f:
+                    cutter_data = yaml.load(f, Loader=SafeLoader)
+                    
+                # Need to split out the naming convenstions for specific chips in order to get the psf path
+                name_pieces = chip.name.split("_")
+                dNum, bandPiece, chipPiece, reqNum = name_pieces[0], name_pieces[1], name_pieces[2], name_pieces[3]           
+                exp =  int(dNum[3:])
+                ccd = int(chipPiece[1:])
+                image_info = None
+                for item in cutter_data['src_info']:
+                    if item['ccdnum'] == ccd and item['expnum'] == exp:
+                        image_info = item
+                PIFF_PTH = image_info['piff_path']
+                psf_file = PIFF_PTH 
+                
+                # MEGAN NEEDS TO ADD gi, iz colors here
+                #psf_file = chip.psf_filename
+                if psf_file is not None:
+                    self.bal_config[i]['input'] = {
+                        'des_piff' : {
+                            'file_name' : psf_file,
+                            #'image_file_name' : chip_file,
+                        }
+                    }
+                
+                
+            else:
+                print("ERROR PSF TYPE NOT SET UP")
+
+            # Setup 'output' field
+            out_file = io.return_output_fname(config.output_dir,
+                                                'balrog_images',
+                                                str(self.curr_real),
+                                                config.data_version,
+                                                self.tile_name,
+                                                chip.band,
+                                                chip.name)
+            self.bal_config[i]['output'] = {'file_name' : out_file}
+
+            # If multiple input types, add list setup
+            if len(self.input_types) > 1:
+                list_structure_gal = deepcopy(self.bal_config[0]['gal'])
+                list_structure_im = deepcopy(self.bal_config[0]['gal'])
+                self.bal_config[i]['gal'].update(list_structure_gal)
+                self.bal_config[i]['image'].update({'image_pos' : list_structure_im})
+
+                # Build index array to choose between inputs in the 'gal' & 'image' fields
+                icount = 0
+                lower = ''
+                # The following enumeration will be in the correct order as it is
+                # a list of dicts rather than a nested dict
+                # NOTE: The final 'else' will result in an index 1 larger than the list,
+                # so it will automatically error if something goes wrong
+                # for j, inpt in enumerate(x['type'] for x in list_structure_gal['items']):
+                for inpt in [x['type'] for x in list_structure_gal['items']]:
+                    if icount == 0:
+                        upper = lower + '@image.N_{}'.format(inpt)
+                        indx_eval = '{} if obj_num<{} else {}'.format(icount, upper, icount+1)
+                    else:
+                        upper = '{}'.format(lower) + '+' + '@image.N_{}'.format(inpt)
+                        indx_eval += ' if obj_num>={} and obj_num<{} else {}'.format(lower,
+                                                                                     upper,
+                                                                                     icount+1)
+                    icount += 1
+                    lower = upper
+
+                self.bal_config[i]['gal'].update({
+                    'index' : {
+                        'type':'Eval',
+                        'str' : indx_eval }
+                    })
+                self.bal_config[i]['image']['image_pos'].update({
+                    'index' : {
+                        'type':'Eval',
+                        'str' : indx_eval }
+                    })
+
+                # Clean up entries
+                for j in range(Ninput): self.bal_config[i]['image']['image_pos']['items'][j] = {}
+
+            chip.setup_config = True
+
+        #-----------------------------------------------------------------------------------------------
+        # Set common entries independent of list structure
+
+        self.bal_config[i]['image'].update({'N_{}'.format(inj_type) : chip.nobjects[inj_type]})
+        # Any extra fields to be set for a given input are handled here
+        inj_cat.setup_chip_config(config, self.bal_config, chip, i)
+
+        #-----------------------------------------------------------------------------------------------
+        # If only one input type, don't use list structure
+        # TODO: Some of this should be streamlined between 1 vs. multi list structure
+        if Ninput == 1:
+
+            # Set object number and positions
+            x, y = inj_pos_im[:,0].tolist(), inj_pos_im[:,1].tolist()
+            nobjs = len(inj_pos_im)
+            self.bal_config[i]['image'].update({
+                'image_pos' : {
+                    'type' : 'XY',
+                    'x' : { 'type' : 'List', 'items' : x },
+                    'y' : { 'type' : 'List', 'items' : y }
+                }
+            })
+
+            # Set the injected objects' catalog indices and flux factor
+            # TODO: Current state; Make sure extinction factor is consistent between inputs!
+            indices = inj_indx.tolist()
+            ff = float(chip.flux_factor * chip.ext_factor)
+            self.bal_config[i]['gal'].update({
+                'scale_flux' : ff,
+                'index' : {
+                    'type' : 'List',
+                    'items' : indices
+                }
+            })
+
+            if config.rotate_objs is True:
+                inj_rot = inj_cat.rotate[real][in_chip]
+                assert len(inj_indx) == len(inj_rot)
+                self.bal_config[i]['gal'].update({
+                    'rotate' : inj_rot.tolist()
+                })
+                
+                
+            # ADD in GI and IZ color if PIFF:
+            indices = inj_indx.tolist()
+            gi_colors = [self.colors_dict[i]['gi_color'] for i in indices]
+            iz_colors = [self.colors_dict[i]['iz_color'] for i in indices]
+                
+            self.bal_config[i]['psf']['type'] = "DES_Piff"    
+            #self.bal_config[i]['psf']['depixelize'] = "false"    
+            
+            self.bal_config[i]['psf']['gi_color'] = gi_colors 
+            self.bal_config[i]['psf']['iz_color'] = iz_colors 
+            
+                
+            """
+            self.bal_config[i]['psf_colors'].update({
+            'piff_colors' : {
+                'type' : 'GI_IZ',
+                'GI' : { 'type' : 'List', 'items' : gi_colors },
+                'IZ' : { 'type' : 'List', 'items' : gi_colors }
+                }
+            })
+
+
+            self.bal_config[i]['gal'].update({
+                'piff_GI_color' : {
+                    'type' : 'List',
+                    'items' : gi_colors
+                }
+            })
+            self.bal_config[i]['gal'].update({
+                'piff_IZ_color' : {
+                    'type' : 'List',
+                    'items' : iz_colors
+                }
+            }) """
+
+                
+                
+            inj_cat.build_single_chip_config(config, self.bal_config, chip, i)
+
+        #-----------------------------------------------------------------------------------------------
+        # If multiple input types, use list structure
+
+        else:
+            # Get object index
+            indx = self.input_indx[input_type]
+
+            # Make sure injection type indices are consistent
+            assert self.bal_config[i]['gal']['items'][indx]['type'] == inj_type
+
+            # Set object indices and flux factor
+            indices = inj_indx.tolist()
+            ff = float(chip.flux_factor * chip.ext_factor)
+            self.bal_config[i]['gal']['items'][indx].update({
+                'scale_flux' : ff,
+                'index' : {
+                    'type' : 'List',
+                    'items' : indices
+                }
+            })
+
+            if config.rotate_objs is True:
+                inj_rot = inj_cat.rotate[real][in_chip]
+                assert len(inj_indx) == len(inj_rot)
+                self.bal_config[i]['gal']['items'][indx].update({
+                    'rotate' : inj_rot.tolist()
+                })
+
+            # Set object positions
+            x, y = inj_pos_im[:,0].tolist(), inj_pos_im[:,1].tolist()
+            self.bal_config[i]['image']['image_pos']['items'][indx].update({
+                'type' : 'XY',
+                'x' : { 'type' : 'List', 'items' : x },
+                'y' : { 'type' : 'List', 'items' : y }
+            })
+
+            # Any extra fields to be set for a given input can be added here.
+            inj_cat.build_multi_chip_config(config, self.bal_config, chip, i, indx)
+
+        chip.types_injected += 1
+
+        # A few final checks...
+        if Ninput == chip.types_injected:
+            self._final_config_check(config, chip, Ninput, inj_type)
+
+        if self.has_injections is False:
+            self.has_injections = True
+
+        return    
+    
+    
 
     def _final_config_check(self, config, chip, Ninput, inj_type):
         # NOTE: Some input types require the field `bands` to be set, and so will fail
@@ -738,7 +1168,7 @@ class Tile(object):
         i = self.bal_config_len - 1
 
         for inj, ninj in chip.nobjects.items():
-            input_type = {v:k for k, v in self.inj_types.iteritems()}[inj]
+            input_type = {v:k for k, v in self.inj_types.items()}[inj] # MEGAN changed from iteritems()
             inj_cat = self.inj_cats[input_type]
             if (ninj == 0) and (inj_cat.needs_band is True):
                 # Need the inverse map of {input_type : inj_type}
@@ -822,7 +1252,7 @@ class Tile(object):
         process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
 
         if vb>0:
-            for line in iter(process.stdout.readline, ''): print(line.replace('\n', ''))
+            for line in iter(process.stdout.readline, b''): print(line.replace(b'\n', b'')) #MEGAN added bytes
 
         # Needed to get the return code from GalSim
         streamdata = process.communicate()[0]
@@ -930,6 +1360,47 @@ class Tile(object):
                 io.combine_fits_extensions(combined_fits, bal_fits, orig_fits, config=config)
 
         return
+    
+    
+    
+    def copy_empty_nullwt_images(self, config, tile_dir, vb):
+        '''
+        Megan added: Need to go through the input nullwt images and copy
+        over any that did not get injections added to them, so that the 
+        extensions and coadding script will work. 
+        '''
+        for band in self.bands:
+            
+            nullwt_dir = os.path.join(tile_dir, self.tile_name, "nullwt-" + band)
+            
+            total = 0
+            missing = 0
+            for chip_nullwt_im in os.listdir(nullwt_dir):
+                total += 1
+                chip_name = chip_nullwt_im[:-21]
+                
+                bal_im_file = io.return_output_fname(config.output_dir,
+                                                     'balrog_images',
+                                                     str(self.curr_real),
+                                                     config.data_version,
+                                                     self.tile_name,
+                                                     band,
+                                                     chip_name)
+                
+                # If the injection file does not exist copy the nullwt into the folder and rename:
+                if not os.path.isfile(bal_im_file):
+                    missing += 1
+                    if vb:
+                        print(bal_im_file)
+                    #print(os.path.join(nullwt_dir, chip_nullwt_im))
+                    shutil.copy(os.path.join(nullwt_dir, chip_nullwt_im), os.path.join(bal_im_file))
+             
+            if vb:
+                print("Total nullwt in ", band, "-band: ", total, " . Missing: ", missing, 
+                      " . Percent missing: ", round(missing/total*100, 4))
+        
+
+        return
 
 #-------------------------
 # Related Tile functions
@@ -966,4 +1437,7 @@ def load_tile_list(tile_list_file, vb=0):
         print('Loaded {} tiles...'.format(len(tile_list)))
 
     return tile_list
+
+
+
 
