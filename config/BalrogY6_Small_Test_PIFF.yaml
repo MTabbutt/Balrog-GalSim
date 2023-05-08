@@ -3,11 +3,11 @@ modules :
   - injector
   - ngmix_catalog
   #- des_star_catalog
-  #- galsim_extra
-  #- montara
-  #- numpy
-  #- eastlake
-  #- eastlake.des_piff #PIFF
+  - galsim_extra
+  - montara
+  - numpy
+  - eastlake
+  - eastlake.des_piff #PIFF
   
 
 some_variables :
@@ -48,8 +48,8 @@ gal :
 psf :
     # For DES chip images with PSFEx files
     # In future, Piff PSFs may be used instead
-    type : DES_PSFEx
-    #type : DES_Piff #PIFF
+    #type : DES_PSFEx
+    type : DES_Piff #PIFF
 
 stamp :
     type : Balrog
@@ -88,7 +88,7 @@ image :
         ngmix_catalog:
             type : 'HexGrid'
             #grid_type : 'HexGrid'
-            grid_spacing : 20 # arcsec
+            grid_spacing : 800 # arcsec
             #inj_frac : 1.0 # its fraction not arcsec
             offset : 'Random'
             rotate : 'Random'
