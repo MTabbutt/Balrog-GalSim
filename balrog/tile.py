@@ -942,7 +942,8 @@ class Tile(object):
                 pth = os.path.join(config.tile_dir, "pizza_cutter_info")
                 for file in os.listdir(pth):
                     if file[13] == chip.band and file [-4:] =="yaml":
-                        pth = os.path.join(pth, file)
+                        if file[:12] == self.tile_name:
+                            pth = os.path.join(pth, file)
                 with open(pth) as f:
                     cutter_data = yaml.load(f, Loader=SafeLoader)
                     
