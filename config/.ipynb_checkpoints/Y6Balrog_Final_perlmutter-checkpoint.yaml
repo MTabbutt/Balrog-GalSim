@@ -1,0 +1,113 @@
+modules :
+  - galsim.des
+  - injector
+  - ngmix_catalog
+  #- des_star_catalog
+  - galsim_extra
+  - montara
+  - numpy
+  - eastlake
+  - eastlake.des_piff #PIFF
+  
+
+some_variables :
+  # Pick a maximum fft size
+  - &max_fft 16384
+  - &bal_dir '/global/homes/t/tabbutt/BalrogY6/Balrog-GalSim/'
+  - &ngmix_dir '/global/homes/t/tabbutt/BalrogY6/inputs/'
+  - &ngmix_file 'BALROG_RUN2_DEEP_CAT_FLAG0INVHS1BDFLT254v4_weighted_v2.fits'
+  #- &star_dir '/data/des81.a/data/mtabbutt/Y6_integrations/inputs/'
+
+# Define the input files
+input :
+    ngmix_catalog :
+      dir : *ngmix_dir
+      file_name : *ngmix_file
+
+      catalog_type : 'bdf'
+      de_redden : True
+
+
+      # Set masking / selection thresholds for catalog
+      #t_frac : 0.5
+      #t_min : 0.001
+      t_max : 100
+      #snr_min : 20.0
+
+    #des_star_catalog :
+      #base_dir : *star_dir
+      #model_type :  'Model_16.5-26.5' # Can select which of Sahar's catalogs you want here
+      #data_version : 'des-pizza-slices-y6-v15'
+
+
+# The gal field defines what kind of galaxy profile to use.
+gal :
+    type : ngmixGalaxy
+
+
+psf :
+    # For DES chip images with PSFEx files
+    # In future, Piff PSFs may be used instead
+    #type : DES_PSFEx
+    type : DES_Piff #PIFF
+
+stamp :
+    type : Balrog
+    gsparams :
+      # fft size is the most likely change you'll want to make
+      maximum_fft_size : *max_fft
+    # Since we are using observed PSFs that already include pixel response:
+    draw_method : no_pixel
+
+image :
+    # ADD a random seed or one will be selected:
+    #random_seed : 2515548553
+
+    # For injected images:
+    noise : {}
+    type : Balrog # Same as AddOn, but with some additional input attributes and checking
+
+    #Injection defines the injection scheme that you want to use - omit to run Y3 fiducial, "Alex" for the fiducial Y6
+    injection_scheme : 'Alex'
+
+    rotate_objs : True
+
+    # To use all bands:
+    bands : 'griz'
+    # To use a subset:
+    # bands : 'g'
+
+    #version : 'y3v02'
+    version : 'des-pizza-slices-y6-v15'
+    run_name : 'TEST'
+
+    extinct_objs : True
+
+    # Can inject objects onto a grid
+    pos_sampling :
+        ngmix_catalog:
+            type : 'HexGrid'
+            #grid_type : 'HexGrid'
+            grid_spacing : 20 # arcsec
+            #inj_frac : 1.0 # its fraction not arcsec
+            offset : 'Random'
+            rotate : 'Random'
+        #des_star_catalog:
+            #type : 'MixedGrid'
+            #inj_frac : 0.01 # 
+
+    # Load WCS from DES chip file
+    wcs :
+      type : Fits
+
+
+    realizations : [0]
+    n_realizations : 1
+
+    xsize: 2048 # DES nullwt chip
+    ysize: 4096 # DES nullwt chip
+
+#output :
+
+    # Can include parent-level output directory here as well
+    # dir : '/path/to/outdir/'
