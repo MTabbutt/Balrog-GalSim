@@ -545,7 +545,7 @@ class Tile(object):
         # Now set up common config entries if chip's first injection
 
         if chip.setup_config is False:
-
+  
             # Setup 'image' field
             chip_file = chip.filename
             self.bal_config[i]['image'] = {
@@ -601,14 +601,49 @@ class Tile(object):
             self.bal_config[i]['stamp'] = {}
 
             # Setup the PSF
-            psf_file = chip.psf_filename
-            if psf_file is not None:
-                self.bal_config[i]['input'] = {
-                    'des_psfex' : {
-                        'file_name' : psf_file,
-                        'image_file_name' : chip_file,
+            if config.gs_config[0]['psf']['type'] == "DES_PSFEx":
+                psf_file = chip.psf_filename
+                if psf_file is not None:
+                    self.bal_config[i]['input'] = {
+                        'des_psfex' : {
+                            'file_name' : psf_file,
+                            'image_file_name' : chip_file,
+                        }
                     }
-                }
+            elif config.gs_config[0]['psf']['type'] == "DES_Piff":
+                
+                pth = os.path.join(config.tile_dir, "pizza_cutter_info")
+                for file in os.listdir(pth):
+                    if file[13] == chip.band and file [-4:] =="yaml":
+                        pth = os.path.join(pth, file)
+                with open(pth) as f:
+                    cutter_data = yaml.load(f, Loader=SafeLoader)
+                    
+                # Need to split out the naming convenstions for specific chips in order to get the psf path
+                name_pieces = chip.name.split("_")
+                dNum, bandPiece, chipPiece, reqNum = name_pieces[0], name_pieces[1], name_pieces[2], name_pieces[3]           
+                exp =  int(dNum[3:])
+                ccd = int(chipPiece[1:])
+                image_info = None
+                for item in cutter_data['src_info']:
+                    if item['ccdnum'] == ccd and item['expnum'] == exp:
+                        image_info = item
+                PIFF_PTH = image_info['piff_path']
+                psf_file = PIFF_PTH 
+                
+                # MEGAN NEEDS TO ADD gi, iz colors here
+                #psf_file = chip.psf_filename
+                if psf_file is not None:
+                    self.bal_config[i]['input'] = {
+                        'des_piff' : {
+                            'file_name' : psf_file,
+                            #'image_file_name' : chip_file,
+                        }
+                    }
+                
+                
+            else:
+                print("ERROR PSF TYPE NOT SET UP")
 
             # Setup 'output' field
             out_file = io.return_output_fname(config.output_dir,
@@ -704,8 +739,39 @@ class Tile(object):
                 self.bal_config[i]['gal'].update({
                     'rotate' : inj_rot.tolist()
                 })
-
-            # Any extra fields to be set for a given input are added here
+                
+                
+            # ADD in GI and IZ color if PIFF:
+            if config.gs_config[0]['psf']['type'] == "DES_Piff":
+                indices = inj_indx.tolist()
+                gi_colors = [self.colors_dict[i]['gi_color'] for i in indices]
+                iz_colors = [self.colors_dict[i]['iz_color'] for i in indices]
+                
+                """
+                self.bal_config[i]['psf_colors'].update({
+                'piff_colors' : {
+                    'type' : 'GI_IZ',
+                    'GI' : { 'type' : 'List', 'items' : gi_colors },
+                    'IZ' : { 'type' : 'List', 'items' : gi_colors }
+                }
+            })
+                """
+                
+                self.bal_config[i]['gal'].update({
+                    'piff_GI_color' : {
+                        'type' : 'List',
+                        'items' : gi_colors
+                    }
+                })
+                self.bal_config[i]['gal'].update({
+                    'piff_IZ_color' : {
+                        'type' : 'List',
+                        'items' : iz_colors
+                    }
+                })
+                
+                
+                
             inj_cat.build_single_chip_config(config, self.bal_config, chip, i)
 
         #-----------------------------------------------------------------------------------------------
