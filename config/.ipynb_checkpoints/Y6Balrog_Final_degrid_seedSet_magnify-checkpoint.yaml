@@ -13,8 +13,8 @@ modules :
 some_variables :
   # Pick a maximum fft size
   - &max_fft 16384
-  - &bal_dir '/global/homes/t/tabbutt/BalrogY6/Balrog-GalSim/'
-  - &ngmix_dir '/global/homes/t/tabbutt/BalrogY6/inputs/'
+  - &bal_dir '/data/des81.a/data/mtabbutt/BalrogY6/Balrog-GalSim/'
+  - &ngmix_dir '/data/des81.a/data/mtabbutt/BalrogY6/inputs/'
   - &ngmix_file 'BALROG_RUN2_DEEP_CAT_FLAG0INVHS1BDFLT254v4_weighted_v2.fits'
   #- &star_dir '/data/des81.a/data/mtabbutt/Y6_integrations/inputs/'
 
@@ -44,7 +44,7 @@ input :
 gal :
     type : ngmixGalaxy
     magnify : 1.02
-
+    
 
 psf :
     # For DES chip images with PSFEx files
@@ -62,7 +62,7 @@ stamp :
 
 image :
     # ADD a random seed or one will be selected:
-    random_seed : 436095216
+    random_seed : 2515548553
 
     # For injected images:
     noise : {}
